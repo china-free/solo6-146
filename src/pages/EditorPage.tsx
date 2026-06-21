@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ZoomIn, ZoomOut, RotateCcw, Save, Download, Sparkles, Image, FolderHeart, Users } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { useWorksStore } from '@/store/worksStore';
 import { useMaterialStore } from '@/store/materialStore';
 import { useCommunityStore } from '@/store/communityStore';
-import { createThumbnail, exportPNG } from '@/utils/export';
+import { exportRealSizePNG, createRealSizeThumbnail } from '@/utils/export';
 import { MemeCanvas } from '@/components/editor/MemeCanvas';
 import { TemplateSelector } from '@/components/editor/TemplateSelector';
 import { ImageUploader } from '@/components/editor/ImageUploader';
@@ -15,8 +15,8 @@ import Button from '@/components/common/Button';
 import { cn } from '@/lib/utils';
 
 export default function EditorPage() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [title, setTitle] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const {
@@ -63,11 +63,7 @@ export default function EditorPage() {
     setCanvasScale(1);
   };
 
-  const handleSaveWork = () => {
-    if (!canvasRef.current) {
-      showToast('画布未准备好', 'error');
-      return;
-    }
+  const handleSaveWork = async () => {
     if (!baseImage) {
       showToast('请先选择或上传一张图片', 'error');
       return;
@@ -77,7 +73,13 @@ export default function EditorPage() {
       return;
     }
     try {
-      const thumbnail = createThumbnail(canvasRef.current);
+      setIsExporting(true);
+      const thumbnail = await createRealSizeThumbnail(
+        baseImage,
+        layers,
+        baseImageWidth,
+        baseImageHeight
+      );
       saveWork({
         title: title.trim(),
         baseImage,
@@ -89,31 +91,34 @@ export default function EditorPage() {
       showToast('作品保存成功！✨');
     } catch {
       showToast('保存失败，请重试', 'error');
+    } finally {
+      setIsExporting(false);
     }
   };
 
-  const handleExportPNG = () => {
-    if (!canvasRef.current) {
-      showToast('画布未准备好', 'error');
-      return;
-    }
+  const handleExportPNG = async () => {
     if (!baseImage) {
       showToast('请先选择或上传一张图片', 'error');
       return;
     }
     try {
-      exportPNG(canvasRef.current, title.trim() || 'meme');
+      setIsExporting(true);
+      await exportRealSizePNG(
+        baseImage,
+        layers,
+        baseImageWidth,
+        baseImageHeight,
+        title.trim() || 'meme'
+      );
       showToast('导出成功！📥');
     } catch {
       showToast('导出失败，请重试', 'error');
+    } finally {
+      setIsExporting(false);
     }
   };
 
-  const handleSaveAndDownload = () => {
-    if (!canvasRef.current) {
-      showToast('画布未准备好', 'error');
-      return;
-    }
+  const handleSaveAndDownload = async () => {
     if (!baseImage) {
       showToast('请先选择或上传一张图片', 'error');
       return;
@@ -123,7 +128,13 @@ export default function EditorPage() {
       return;
     }
     try {
-      const thumbnail = createThumbnail(canvasRef.current);
+      setIsExporting(true);
+      const thumbnail = await createRealSizeThumbnail(
+        baseImage,
+        layers,
+        baseImageWidth,
+        baseImageHeight
+      );
       saveWork({
         title: title.trim(),
         baseImage,
@@ -132,10 +143,18 @@ export default function EditorPage() {
         layers,
         thumbnail,
       });
-      exportPNG(canvasRef.current, title.trim());
+      await exportRealSizePNG(
+        baseImage,
+        layers,
+        baseImageWidth,
+        baseImageHeight,
+        title.trim()
+      );
       showToast('保存并下载成功！🎉');
     } catch {
       showToast('操作失败，请重试', 'error');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -204,17 +223,17 @@ export default function EditorPage() {
         <div className="flex-1 flex flex-col gap-4 min-w-0">
           <div className="flex-1 flex items-center justify-center min-h-0">
             <div
-              className={cn(
-                'w-full h-full',
-                canvasScale !== 1 && 'overflow-auto'
-              )}
-              style={{
-                transform: canvasScale !== 1 ? `scale(${canvasScale})` : undefined,
-                transformOrigin: 'center center',
-              }}
-            >
-              <MemeCanvas ref={canvasRef} />
-            </div>
+                className={cn(
+                  'w-full h-full',
+                  canvasScale !== 1 && 'overflow-auto'
+                )}
+                style={{
+                  transform: canvasScale !== 1 ? `scale(${canvasScale})` : undefined,
+                  transformOrigin: 'center center',
+                }}
+              >
+                <MemeCanvas />
+              </div>
           </div>
 
           <div className="glass p-4 rounded-2xl flex items-center justify-between gap-4 flex-shrink-0">

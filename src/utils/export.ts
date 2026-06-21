@@ -1,3 +1,6 @@
+import { renderMemeToCanvas } from './canvas';
+import type { TextLayer } from '@/types';
+
 export function exportPNG(canvas: HTMLCanvasElement, filename?: string): void {
   const dataURL = canvas.toDataURL('image/png');
   const link = document.createElement('a');
@@ -35,4 +38,42 @@ export function createThumbnail(canvas: HTMLCanvasElement, maxSize: number = 320
   }
 
   return thumbnailCanvas.toDataURL('image/jpeg', 0.8);
+}
+
+export async function exportRealSizePNG(
+  baseImageUrl: string,
+  layers: TextLayer[],
+  width: number,
+  height: number,
+  filename?: string
+): Promise<void> {
+  const canvas = await renderMemeToCanvas(baseImageUrl, layers, width, height);
+  exportPNG(canvas, filename);
+}
+
+export async function createRealSizeThumbnail(
+  baseImageUrl: string,
+  layers: TextLayer[],
+  width: number,
+  height: number,
+  maxSize: number = 320
+): Promise<string> {
+  const canvas = await renderMemeToCanvas(baseImageUrl, layers, width, height);
+  return createThumbnail(canvas, maxSize);
+}
+
+export function canvasToBlob(canvas: HTMLCanvasElement, type: string = 'image/png'): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error('Failed to convert canvas to blob'));
+        }
+      },
+      type,
+      0.95
+    );
+  });
 }

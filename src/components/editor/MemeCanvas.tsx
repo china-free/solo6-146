@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback, forwardRef, ForwardedRef, useImperativeHandle } from 'react';
+import { useRef, useEffect, useState, useCallback, forwardRef, ForwardedRef, useImperativeHandle, useMemo } from 'react';
 import { useEditorStore } from '@/store/editorStore';
 import { loadImage, wrapText } from '@/utils/canvas';
 import type { TextLayer } from '@/types';
@@ -22,6 +22,16 @@ interface BoundingBox {
   maxY: number;
   width: number;
   height: number;
+}
+
+function scaleLayerForPreview(layer: TextLayer, ratio: number): TextLayer {
+  return {
+    ...layer,
+    x: layer.x * ratio,
+    y: layer.y * ratio,
+    fontSize: layer.fontSize * ratio,
+    strokeWidth: layer.strokeWidth * ratio,
+  };
 }
 
 function getLayerBoundingBox(ctx: CanvasRenderingContext2D, layer: TextLayer, canvasWidth: number): BoundingBox {
@@ -135,7 +145,7 @@ export const MemeCanvas = forwardRef<HTMLCanvasElement>(function MemeCanvas(_pro
   const CANVAS_MAX_WIDTH = 800;
   const CANVAS_MAX_HEIGHT = 600;
 
-  const { canvasWidth, canvasHeight } = useCallback(() => {
+  const { canvasWidth, canvasHeight } = useMemo(() => {
     if (!baseImage) {
       return { canvasWidth: 600, canvasHeight: 600 };
     }
@@ -147,7 +157,12 @@ export const MemeCanvas = forwardRef<HTMLCanvasElement>(function MemeCanvas(_pro
       w = h * ratio;
     }
     return { canvasWidth: Math.round(w), canvasHeight: Math.round(h) };
-  }, [baseImage, baseImageWidth, baseImageHeight])();
+  }, [baseImage, baseImageWidth, baseImageHeight]);
+
+  const previewScaleRatio = useMemo(() => {
+    if (!baseImage || baseImageWidth === 0) return 1;
+    return canvasWidth / baseImageWidth;
+  }, [baseImage, baseImageWidth, canvasWidth]);
 
   useEffect(() => {
     if (!baseImage) return;
@@ -252,10 +267,11 @@ export const MemeCanvas = forwardRef<HTMLCanvasElement>(function MemeCanvas(_pro
       ctx.drawImage(img, 0, 0, cw, ch);
     }
 
-    const sortedLayers = [...layers].sort((a, b) => a.zIndex - b.zIndex);
+    const scaledLayers = layers.map((l) => scaleLayerForPreview(l, previewScaleRatio));
+    const sortedLayers = [...scaledLayers].sort((a, b) => a.zIndex - b.zIndex);
 
     let selectedBBox: BoundingBox | null = null;
-    const selectedLayer = layers.find((l) => l.id === selectedLayerId);
+    const selectedLayer = scaledLayers.find((l) => l.id === selectedLayerId);
 
     for (const layer of sortedLayers) {
       drawTextLayer(ctx, layer, cw);
@@ -268,7 +284,7 @@ export const MemeCanvas = forwardRef<HTMLCanvasElement>(function MemeCanvas(_pro
     if (selectedBBox) {
       drawSelectionBox(ctx, selectedBBox);
     }
-  }, [baseImage, loadedImages, layers, selectedLayerId, canvasWidth, canvasHeight, drawTextLayer, drawSelectionBox]);
+  }, [baseImage, loadedImages, layers, selectedLayerId, canvasWidth, canvasHeight, previewScaleRatio, drawTextLayer, drawSelectionBox]);
 
   useEffect(() => {
     render();
@@ -284,17 +300,18 @@ export const MemeCanvas = forwardRef<HTMLCanvasElement>(function MemeCanvas(_pro
       const { x, y } = getCanvasCoords(e, canvas);
       const cw = canvasWidth;
 
-      const sortedLayers = [...layers].sort((a, b) => b.zIndex - a.zIndex);
+      const scaledLayers = layers.map((l) => scaleLayerForPreview(l, previewScaleRatio));
+      const sortedLayers = [...scaledLayers].sort((a, b) => b.zIndex - a.zIndex);
 
-      for (const layer of sortedLayers) {
-        const bbox = getLayerBoundingBox(ctx, layer, cw);
+      for (const scaledLayer of sortedLayers) {
+        const bbox = getLayerBoundingBox(ctx, scaledLayer, cw);
         if (isPointInBBox(x, y, bbox)) {
-          selectLayer(layer.id);
+          selectLayer(scaledLayer.id);
           setDragState({
             isDragging: true,
-            layerId: layer.id,
-            offsetX: x - layer.x,
-            offsetY: y - layer.y,
+            layerId: scaledLayer.id,
+            offsetX: x - scaledLayer.x,
+            offsetY: y - scaledLayer.y,
           });
           return;
         }
@@ -302,7 +319,7 @@ export const MemeCanvas = forwardRef<HTMLCanvasElement>(function MemeCanvas(_pro
 
       selectLayer(null);
     },
-    [layers, selectedLayerId, selectLayer, canvasWidth]
+    [layers, selectedLayerId, selectLayer, canvasWidth, previewScaleRatio]
   );
 
   const handleMouseMove = useCallback(
@@ -315,12 +332,15 @@ export const MemeCanvas = forwardRef<HTMLCanvasElement>(function MemeCanvas(_pro
       const { x, y } = getCanvasCoords(e, canvas);
       const { layerId, offsetX, offsetY } = dragStateRef.current;
 
+      const realX = (x - offsetX) / previewScaleRatio;
+      const realY = (y - offsetY) / previewScaleRatio;
+
       updateLayer(layerId, {
-        x: x - offsetX,
-        y: y - offsetY,
+        x: realX,
+        y: realY,
       });
     },
-    [updateLayer]
+    [updateLayer, previewScaleRatio]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -341,21 +361,23 @@ export const MemeCanvas = forwardRef<HTMLCanvasElement>(function MemeCanvas(_pro
       const { x, y } = getCanvasCoords(e, canvas);
       const cw = canvasWidth;
 
-      const sortedLayers = [...layers].sort((a, b) => b.zIndex - a.zIndex);
+      const scaledLayers = layers.map((l) => scaleLayerForPreview(l, previewScaleRatio));
+      const sortedLayers = [...scaledLayers].sort((a, b) => b.zIndex - a.zIndex);
 
-      for (const layer of sortedLayers) {
-        const bbox = getLayerBoundingBox(ctx, layer, cw);
+      for (const scaledLayer of sortedLayers) {
+        const bbox = getLayerBoundingBox(ctx, scaledLayer, cw);
         if (isPointInBBox(x, y, bbox)) {
-          selectLayer(layer.id);
-          const newContent = window.prompt('编辑文字内容:', layer.content);
+          selectLayer(scaledLayer.id);
+          const originalLayer = layers.find((l) => l.id === scaledLayer.id);
+          const newContent = window.prompt('编辑文字内容:', originalLayer?.content || '');
           if (newContent !== null && newContent !== undefined) {
-            updateLayer(layer.id, { content: newContent });
+            updateLayer(scaledLayer.id, { content: newContent });
           }
           return;
         }
       }
     },
-    [layers, selectLayer, updateLayer, canvasWidth]
+    [layers, selectLayer, updateLayer, canvasWidth, previewScaleRatio]
   );
 
   const aspectRatio = canvasWidth / canvasHeight;
