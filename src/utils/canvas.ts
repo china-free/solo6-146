@@ -1,4 +1,4 @@
-import type { TextLayer } from '@/types';
+import type { TextLayer, MemeProject } from '@/types';
 
 const imageCache = new Map<string, HTMLImageElement>();
 
@@ -153,4 +153,8 @@ export async function renderMemeToCanvas(
   }
 
   return canvas;
+}
+
+export async function renderProjectToCanvas(project: MemeProject): Promise<HTMLCanvasElement> {
+  return renderMemeToCanvas(project.baseImage, project.layers, project.baseImageWidth, project.baseImageHeight);
 }

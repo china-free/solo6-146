@@ -43,7 +43,7 @@ export default function WorkPreviewModal({
       <div className="space-y-6">
         <div className="rounded-xl overflow-hidden bg-bg-deep checkerboard">
           <img
-            src={work.thumbnail}
+            src={work.thumbnail || work.project.baseImage}
             alt={work.title}
             className="w-full max-h-[60vh] object-contain mx-auto"
           />
@@ -63,7 +63,7 @@ export default function WorkPreviewModal({
           <div className="p-4 rounded-xl bg-bg-card border border-border-neon">
             <p className="text-xs text-gray-500 mb-1">图层数</p>
             <p className="text-white font-medium">
-              <span className="text-neon-purple">{work.layers.length}</span> 个文字
+              <span className="text-neon-purple">{work.project.layers.length}</span> 个文字
             </p>
           </div>
           <div className="p-4 rounded-xl bg-bg-card border border-border-neon">

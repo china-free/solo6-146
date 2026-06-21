@@ -62,7 +62,7 @@ export function DetailModal({ work, onClose }: DetailModalProps) {
         <div className="col-span-3 flex flex-col gap-4">
           <div className="w-full rounded-xl overflow-hidden bg-bg-card/50 border border-border-neon flex items-center justify-center">
             <img
-              src={work.thumbnail || work.baseImage}
+              src={work.thumbnail || work.project.baseImage}
               alt={work.title}
               className="w-full object-contain max-h-[70vh]"
             />

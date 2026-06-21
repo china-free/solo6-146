@@ -1,4 +1,5 @@
-import type { Category, MemeWork, MaterialImage, Comment, UserInfo, TextLayer } from '@/types';
+import type { Category, MemeWork, MaterialImage, Comment, UserInfo, TextLayer, MemeProject } from '@/types';
+import { MEME_PROJECT_VERSION } from '@/types';
 import { generateId } from '@/utils/storage';
 
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -175,14 +176,20 @@ export const COMMUNITY_WORKS: MemeWork[] = Array.from({ length: 12 }, (_, i) => 
   const layerCount = 2 + Math.floor(Math.random() * 3);
   const commentCount = 2 + Math.floor(Math.random() * 4);
   const baseUrl = `https://picsum.photos/seed/work${i + 100}/600/600`;
+  const baseImage = baseUrl;
+  const layers = makeLayers(layerCount);
+  const project: MemeProject = {
+    version: MEME_PROJECT_VERSION,
+    baseImage,
+    baseImageWidth: 600,
+    baseImageHeight: 600,
+    layers,
+  };
   return {
     id: generateId(),
     title: workTitles[i % workTitles.length] + (i >= workTitles.length ? ` ${Math.floor(i / workTitles.length) + 1}` : ''),
-    baseImage: baseUrl,
-    baseImageWidth: 600,
-    baseImageHeight: 600,
-    layers: makeLayers(layerCount),
     thumbnail: baseUrl,
+    project,
     createdAt: Date.now() - (i + 1) * 3600000 * Math.floor(Math.random() * 24 + 1),
     updatedAt: Date.now() - i * 1800000,
     isPublic: true,

@@ -27,14 +27,19 @@ export interface MaterialImage {
   isSystem: boolean;
 }
 
-export interface MemeWork {
-  id: string;
-  title: string;
+export interface MemeProject {
+  version: '1.0.0';
   baseImage: string;
   baseImageWidth: number;
   baseImageHeight: number;
   layers: TextLayer[];
+}
+
+export interface MemeWork {
+  id: string;
+  title: string;
   thumbnail: string;
+  project: MemeProject;
   createdAt: number;
   updatedAt: number;
   isPublic: boolean;
@@ -74,4 +79,28 @@ export interface EditorState {
   canvasScale: number;
   canvasOffsetX: number;
   canvasOffsetY: number;
+}
+
+export const MEME_PROJECT_VERSION = '1.0.0' as const;
+
+export function createEmptyProject(): MemeProject {
+  return {
+    version: MEME_PROJECT_VERSION,
+    baseImage: '',
+    baseImageWidth: 600,
+    baseImageHeight: 600,
+    layers: [],
+  };
+}
+
+export function isMemeProject(obj: unknown): obj is MemeProject {
+  if (typeof obj !== 'object' || obj === null) return false;
+  const p = obj as Record<string, unknown>;
+  return (
+    typeof p.version === 'string' &&
+    typeof p.baseImage === 'string' &&
+    typeof p.baseImageWidth === 'number' &&
+    typeof p.baseImageHeight === 'number' &&
+    Array.isArray(p.layers)
+  );
 }

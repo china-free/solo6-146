@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { MemeWork, UserInfo, Comment } from '@/types';
+import type { MemeWork, UserInfo, Comment, MemeProject, TextLayer } from '@/types';
+import { MEME_PROJECT_VERSION, isMemeProject } from '@/types';
 import { generateId, loadFromStorage, saveToStorage, STORAGE_KEYS } from '@/utils/storage';
 import { COMMUNITY_WORKS } from '@/utils/mockData';
 import { useEditorStore } from '@/store/editorStore';
@@ -24,10 +25,36 @@ export const useCommunityStore = create<CommunityStore>((set, get) => ({
   user: null,
 
   initStore: () => {
-    let storedWorks = loadFromStorage<MemeWork[]>(STORAGE_KEYS.COMMUNITY, []);
-    if (storedWorks.length === 0) {
+    const rawWorks = loadFromStorage<Array<Record<string, unknown>>>(STORAGE_KEYS.COMMUNITY, []);
+    let storedWorks: MemeWork[];
+    if (rawWorks.length === 0) {
       storedWorks = COMMUNITY_WORKS;
       saveToStorage(STORAGE_KEYS.COMMUNITY, storedWorks);
+    } else {
+      storedWorks = rawWorks.map((raw) => {
+        if ('project' in raw && isMemeProject(raw.project)) {
+          return raw as unknown as MemeWork;
+        }
+        const work = raw as Record<string, unknown>;
+        return {
+          id: work.id,
+          title: work.title,
+          thumbnail: work.thumbnail,
+          project: {
+            version: MEME_PROJECT_VERSION,
+            baseImage: (work.baseImage as string) ?? '',
+            baseImageWidth: (work.baseImageWidth as number) ?? 600,
+            baseImageHeight: (work.baseImageHeight as number) ?? 600,
+            layers: (work.layers as TextLayer[]) ?? [],
+          },
+          createdAt: work.createdAt,
+          updatedAt: work.updatedAt,
+          isPublic: work.isPublic,
+          likes: work.likes,
+          comments: work.comments,
+          author: work.author,
+        } as MemeWork;
+      });
     }
     const storedLiked = loadFromStorage<string[]>(STORAGE_KEYS.LIKED, []);
     const storedUser = loadFromStorage<UserInfo | null>(STORAGE_KEYS.USER, null);
@@ -90,11 +117,6 @@ export const useCommunityStore = create<CommunityStore>((set, get) => ({
   useAsTemplate: (id) => {
     const work = get().works.find((w) => w.id === id);
     if (!work) return;
-    useEditorStore.getState().loadWork({
-      baseImage: work.baseImage,
-      baseImageWidth: work.baseImageWidth,
-      baseImageHeight: work.baseImageHeight,
-      layers: work.layers,
-    });
+    useEditorStore.getState().loadProject(work.project);
   },
 }));

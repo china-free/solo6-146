@@ -1,5 +1,5 @@
 import { renderMemeToCanvas } from './canvas';
-import type { TextLayer } from '@/types';
+import type { TextLayer, MemeProject } from '@/types';
 
 export function exportPNG(canvas: HTMLCanvasElement, filename?: string): void {
   const dataURL = canvas.toDataURL('image/png');
@@ -76,4 +76,30 @@ export function canvasToBlob(canvas: HTMLCanvasElement, type: string = 'image/pn
       0.95
     );
   });
+}
+
+export async function exportProjectPNG(
+  project: MemeProject,
+  filename?: string
+): Promise<void> {
+  const canvas = await renderMemeToCanvas(
+    project.baseImage,
+    project.layers,
+    project.baseImageWidth,
+    project.baseImageHeight
+  );
+  exportPNG(canvas, filename);
+}
+
+export async function createProjectThumbnail(
+  project: MemeProject,
+  maxSize: number = 320
+): Promise<string> {
+  const canvas = await renderMemeToCanvas(
+    project.baseImage,
+    project.layers,
+    project.baseImageWidth,
+    project.baseImageHeight
+  );
+  return createThumbnail(canvas, maxSize);
 }

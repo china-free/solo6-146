@@ -5,7 +5,8 @@ import { useEditorStore } from '@/store/editorStore';
 import { useWorksStore } from '@/store/worksStore';
 import { useMaterialStore } from '@/store/materialStore';
 import { useCommunityStore } from '@/store/communityStore';
-import { exportRealSizePNG, createRealSizeThumbnail } from '@/utils/export';
+import { MEME_PROJECT_VERSION, MemeProject } from '@/types';
+import { createProjectThumbnail, exportProjectPNG } from '@/utils/export';
 import { MemeCanvas } from '@/components/editor/MemeCanvas';
 import { TemplateSelector } from '@/components/editor/TemplateSelector';
 import { ImageUploader } from '@/components/editor/ImageUploader';
@@ -74,19 +75,18 @@ export default function EditorPage() {
     }
     try {
       setIsExporting(true);
-      const thumbnail = await createRealSizeThumbnail(
-        baseImage,
-        layers,
-        baseImageWidth,
-        baseImageHeight
-      );
-      saveWork({
-        title: title.trim(),
-        baseImage,
+      const currentProject: MemeProject = {
+        version: MEME_PROJECT_VERSION,
+        baseImage: baseImage || '',
         baseImageWidth,
         baseImageHeight,
         layers,
+      };
+      const thumbnail = await createProjectThumbnail(currentProject);
+      saveWork({
+        title: title.trim(),
         thumbnail,
+        project: currentProject,
       });
       showToast('作品保存成功！✨');
     } catch {
@@ -103,13 +103,14 @@ export default function EditorPage() {
     }
     try {
       setIsExporting(true);
-      await exportRealSizePNG(
-        baseImage,
-        layers,
+      const currentProject: MemeProject = {
+        version: MEME_PROJECT_VERSION,
+        baseImage: baseImage || '',
         baseImageWidth,
         baseImageHeight,
-        title.trim() || 'meme'
-      );
+        layers,
+      };
+      await exportProjectPNG(currentProject, title.trim() || 'meme');
       showToast('导出成功！📥');
     } catch {
       showToast('导出失败，请重试', 'error');
@@ -129,27 +130,20 @@ export default function EditorPage() {
     }
     try {
       setIsExporting(true);
-      const thumbnail = await createRealSizeThumbnail(
-        baseImage,
-        layers,
+      const currentProject: MemeProject = {
+        version: MEME_PROJECT_VERSION,
+        baseImage: baseImage || '',
         baseImageWidth,
-        baseImageHeight
-      );
+        baseImageHeight,
+        layers,
+      };
+      const thumbnail = await createProjectThumbnail(currentProject);
       saveWork({
         title: title.trim(),
-        baseImage,
-        baseImageWidth,
-        baseImageHeight,
-        layers,
         thumbnail,
+        project: currentProject,
       });
-      await exportRealSizePNG(
-        baseImage,
-        layers,
-        baseImageWidth,
-        baseImageHeight,
-        title.trim()
-      );
+      await exportProjectPNG(currentProject, title.trim());
       showToast('保存并下载成功！🎉');
     } catch {
       showToast('操作失败，请重试', 'error');

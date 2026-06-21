@@ -42,7 +42,7 @@ export default function WorkCard({
         <div className="flex items-center justify-between text-sm text-gray-400 mb-3">
           <span>{formatDate(work.createdAt)}</span>
           <span className="px-2 py-0.5 text-xs rounded-full bg-neon-purple/20 text-neon-purple">
-            {work.layers.length} 个文字
+            {work.project.layers.length} 个文字
           </span>
         </div>
       </div>

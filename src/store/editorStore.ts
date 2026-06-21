@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { EditorState, TextLayer } from '@/types';
+import type { EditorState, TextLayer, MemeProject } from '@/types';
+import { MEME_PROJECT_VERSION, isMemeProject } from '@/types';
 import { generateId } from '@/utils/storage';
 
 interface EditorStore extends EditorState {
@@ -13,12 +14,14 @@ interface EditorStore extends EditorState {
   moveLayerDown: (id: string) => void;
   setCanvasScale: (scale: number) => void;
   clearAll: () => void;
-  loadWork: (work: {
+  loadWork: (work: MemeProject | {
     baseImage: string;
     baseImageWidth: number;
     baseImageHeight: number;
     layers: TextLayer[];
   }) => void;
+  getCurrentProject: () => MemeProject;
+  loadProject: (project: MemeProject) => void;
 }
 
 const DEFAULT_STATE: EditorState = {
@@ -130,12 +133,50 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       canvasOffsetY: 0,
     }),
 
-  loadWork: (work) =>
+  loadWork: (work) => {
+    let baseImage: string;
+    let baseImageWidth: number;
+    let baseImageHeight: number;
+    let layers: TextLayer[];
+
+    if (isMemeProject(work)) {
+      baseImage = work.baseImage;
+      baseImageWidth = work.baseImageWidth;
+      baseImageHeight = work.baseImageHeight;
+      layers = work.layers;
+    } else {
+      baseImage = work.baseImage;
+      baseImageWidth = work.baseImageWidth;
+      baseImageHeight = work.baseImageHeight;
+      layers = work.layers;
+    }
+
     set({
-      baseImage: work.baseImage,
-      baseImageWidth: work.baseImageWidth,
-      baseImageHeight: work.baseImageHeight,
-      layers: [...work.layers],
+      baseImage,
+      baseImageWidth,
+      baseImageHeight,
+      layers: [...layers],
+      selectedLayerId: null,
+    });
+  },
+
+  getCurrentProject: () => {
+    const { baseImage, baseImageWidth, baseImageHeight, layers } = get();
+    return {
+      version: MEME_PROJECT_VERSION,
+      baseImage: baseImage ?? '',
+      baseImageWidth,
+      baseImageHeight,
+      layers: [...layers],
+    };
+  },
+
+  loadProject: (project) =>
+    set({
+      baseImage: project.baseImage,
+      baseImageWidth: project.baseImageWidth,
+      baseImageHeight: project.baseImageHeight,
+      layers: [...project.layers],
       selectedLayerId: null,
     }),
 }));
